@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+from pathlib import Path
 
 # Page config
 st.set_page_config(
@@ -17,10 +18,15 @@ st.markdown(
     "Find fuel‑optimal speeds for a given voyage using a trained ML model and cubic speed–fuel scaling."
 )
 
+# Resolve paths relative to this file
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "fuel_model_rf_v1.joblib"
+DATA_DIR = BASE_DIR / "data"
+
 # Load model
 @st.cache_resource
 def load_model():
-    return joblib.load("../models/fuel_model_rf_v1.joblib")
+    return joblib.load(MODEL_PATH)
 
 model = load_model()
 
