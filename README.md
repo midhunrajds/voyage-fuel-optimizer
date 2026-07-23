@@ -104,3 +104,21 @@ This project was developed as an independent data science project to showcase en
 
 **Interactive demo:** [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
 
+
+## How to use the app
+
+Open the live demo:  
+[Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
+
+1. In the left sidebar, set your voyage inputs:
+   - Ship type, fuel type, and route (e.g., “Port Harcourt–Lagos”)
+   - Weather conditions and month
+   - Distance (units) and engine efficiency
+   - Maximum travel time (ETA, in hours)
+2. The app computes fuel consumption over a range of feasible speeds and applies cubic speed–fuel scaling.
+3. Review the results:
+   - Optimal speed, travel time, fuel/day, and total fuel
+   - “Total fuel vs speed” and “Fuel/day vs speed” plots
+   - A sample table with computed values for each candidate speed
+
+Use the app to explore how route, weather, engine efficiency, and ETA constraints affect the fuel-optimal speed.
