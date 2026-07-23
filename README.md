@@ -101,3 +101,6 @@ MIT.
 ## About
 
 This project was developed as an independent data science project to showcase end-to-end skills: data cleaning, EDA, modeling, and a simple optimization application in the marine/shipping domain.
+
+**Interactive demo:** [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer.streamlit.app)
+**Interactive demo:** [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
