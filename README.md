@@ -104,4 +104,3 @@ This project was developed as an independent data science project to showcase en
 
 **Interactive demo:** [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
 
-Interactive demo: [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
