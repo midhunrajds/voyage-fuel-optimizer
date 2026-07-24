@@ -153,9 +153,9 @@ else:
     with col2:
         st.metric("Travel time", f"{opt['time_hours']:.2f} h")
     with col3:
-        st.metric("Fuel/day", f"{opt['fuel_per_day']:.2f}")
+        st.metric("Fuel/day", f"{opt['fuel_per_day']:.2f} L")
     with col4:
-        st.metric("Total fuel", f"{opt['total_fuel']:.2f}")
+        st.metric("Total fuel", f"{opt['total_fuel']:.2f} L")
     
     # Plot: total fuel vs speed
     st.subheader("Total fuel vs speed")
@@ -163,7 +163,7 @@ else:
     sns.lineplot(data=res_df, x="speed", y="total_fuel", ax=ax1)
     ax1.axvline(opt["speed"], color="red", linestyle="--", label=f"Optimal ≈ {opt['speed']:.2f}")
     ax1.set_xlabel("Speed (units/hour)")
-    ax1.set_ylabel("Total fuel (units)")
+    ax1.set_ylabel("Total fuel (L)")
     ax1.set_title("Voyage fuel vs speed (cubic scaling)")
     ax1.legend()
     st.pyplot(fig1)
@@ -175,7 +175,7 @@ else:
     ax2.axvline(reference_speed, color="gray", linestyle=":", label=f"Reference speed = {reference_speed:.0f}")
     ax2.axvline(opt["speed"], color="red", linestyle="--", label=f"Optimal ≈ {opt['speed']:.2f}")
     ax2.set_xlabel("Speed (units/hour)")
-    ax2.set_ylabel("Fuel/day (units)")
+    ax2.set_ylabel("Fuel/day (L)")
     ax2.set_title("Fuel/day vs speed (cubic scaling)")
     ax2.legend()
     st.pyplot(fig2)
