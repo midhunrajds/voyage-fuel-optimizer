@@ -122,3 +122,13 @@ Open the live demo:
    - A sample table with computed values for each candidate speed
 
 Use the app to explore how route, weather, engine efficiency, and ETA constraints affect the fuel-optimal speed.
+
+## Notebook previews
+
+### 01 EDA and model selection
+
+![01 EDA and model selection](assets/01_eda_and_model_selection.png)
+
+### 02 Voyage optimizer
+
+![02 Voyage optimizer](assets/02_voyage_optimizer.png)
