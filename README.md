@@ -56,10 +56,10 @@ Key components:
 
 **Performance (5-fold CV on training data):**
 - R² ≈ 0.93
-- MAE ≈ 342 fuel units
-- RMSE ≈ 461 fuel units
+- MAE ≈ 342 liters
+- RMSE ≈ 461 liters
 
-**Interpretation:** The model explains ~93% of the variance in fuel consumption, with an average absolute error of ~342 units. This provides a strong baseline for scenario analysis and voyage optimization.
+**Interpretation:** The model explains ~93% of the variance in fuel consumption, with an average absolute error of ~342 liters. This provides a strong baseline for scenario analysis and voyage optimization.
 
 ## Voyage optimization
 
@@ -72,9 +72,9 @@ $$
 the optimizer finds the speed that minimizes total fuel for a given route and ETA constraint.
 
 **Example result (Port Harcourt–Lagos, ETA ≤ 12h):**
-- Optimal speed: ~10.75 units/hour
+- Optimal speed: ~10.75 knots
 - Travel time: ~12 hours
-- Total fuel: ~1496 units
+- Total fuel: ~1496 liters
 
 The optimizer typically favors **slow steaming** (lowest feasible speed that meets the ETA), which aligns with industry practice for reducing bunker costs and emissions.
 
@@ -113,7 +113,7 @@ Open the live demo:
 1. In the left sidebar, set your voyage inputs:
    - Ship type, fuel type, and route (e.g., “Port Harcourt–Lagos”)
    - Weather conditions and month
-   - Distance (units) and engine efficiency
+   - Distance (nautical miles) and engine efficiency
    - Maximum travel time (ETA, in hours)
 2. The app computes fuel consumption over a range of feasible speeds and applies cubic speed–fuel scaling.
 3. Review the results:

@@ -76,7 +76,7 @@ month = st.sidebar.selectbox(
 )
 
 distance = st.sidebar.number_input(
-    "Distance (units)",
+    "Distance (nautical miles)",
     min_value=1.0,
     value=128.52,
     step=0.01
@@ -149,7 +149,7 @@ else:
     # Top metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Optimal speed", f"{opt['speed']:.2f}")
+        st.metric("Optimal speed", f"{opt['speed']:.2f} knots")
     with col2:
         st.metric("Travel time", f"{opt['time_hours']:.2f} h")
     with col3:
@@ -162,7 +162,7 @@ else:
     fig1, ax1 = plt.subplots()
     sns.lineplot(data=res_df, x="speed", y="total_fuel", ax=ax1)
     ax1.axvline(opt["speed"], color="red", linestyle="--", label=f"Optimal ≈ {opt['speed']:.2f}")
-    ax1.set_xlabel("Speed (units/hour)")
+    ax1.set_xlabel("Speed (knots)")
     ax1.set_ylabel("Total fuel (L)")
     ax1.set_title("Voyage fuel vs speed (cubic scaling)")
     ax1.legend()
@@ -174,7 +174,7 @@ else:
     sns.lineplot(data=res_df, x="speed", y="fuel_per_day", ax=ax2)
     ax2.axvline(reference_speed, color="gray", linestyle=":", label=f"Reference speed = {reference_speed:.0f}")
     ax2.axvline(opt["speed"], color="red", linestyle="--", label=f"Optimal ≈ {opt['speed']:.2f}")
-    ax2.set_xlabel("Speed (units/hour)")
+    ax2.set_xlabel("Speed (knots)")
     ax2.set_ylabel("Fuel/day (L)")
     ax2.set_title("Fuel/day vs speed (cubic scaling)")
     ax2.legend()
