@@ -1,7 +1,5 @@
-import joblib
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import streamlit as st
 from pathlib import Path
 
@@ -14,8 +12,6 @@ st.caption(
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "models" / "fuel_model_rf_v1.joblib"
-
 DATA_PATH = BASE_DIR / "data" / "ship_fuel_efficiency.csv"
 
 feature_cols = [
@@ -35,38 +31,30 @@ def load_data():
     return df.dropna(subset=required).copy()
 
 @st.cache_resource
-def load_model():
-    # Prefer the saved model for fast startup. If the serialized artifact was
-    # created with an incompatible scikit-learn/joblib version, retrain from
-    # the repository dataset so the Streamlit app remains usable.
-    try:
-        return joblib.load(MODEL_PATH), "saved model"
-    except Exception as exc:
-        from sklearn.compose import ColumnTransformer
-        from sklearn.ensemble import RandomForestRegressor
-        from sklearn.pipeline import Pipeline
-        from sklearn.preprocessing import OneHotEncoder
+def build_model(dataset):
+    from sklearn.compose import ColumnTransformer
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder
 
-        df = load_data()
-        preprocess = ColumnTransformer(
-            transformers=[
-                ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
-                ("num", "passthrough", num_cols),
-            ]
-        )
-        pipeline = Pipeline([
-            ("preprocess", preprocess),
-            ("model", RandomForestRegressor(
-                n_estimators=150, random_state=42, n_jobs=-1
-            )),
-        ])
-        pipeline.fit(df[feature_cols], df["fuel_consumption"])
-        return pipeline, f"runtime retraining (saved model unavailable: {type(exc).__name__})"
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
+            ("num", "passthrough", num_cols),
+        ]
+    )
+    pipeline = Pipeline([
+        ("preprocess", preprocess),
+        ("model", RandomForestRegressor(
+            n_estimators=100, random_state=42, n_jobs=-1
+        )),
+    ])
+    pipeline.fit(dataset[feature_cols], dataset["fuel_consumption"])
+    return pipeline
 
-model, model_status = load_model()
 dataset = load_data()
-
-st.caption(f"Model status: {model_status}")
+model = build_model(dataset)
+st.caption("Model status: trained at app startup from the repository dataset")
 
 st.sidebar.header("Voyage inputs")
 
@@ -137,14 +125,8 @@ else:
     c4.metric("Scenario total fuel", f"{opt['total_fuel']:,.0f} L")
 
     st.subheader("Fuel vs speed")
-    fig, ax = plt.subplots()
-    ax.plot(res_df["speed"], res_df["total_fuel"], marker="o")
-    ax.axvline(float(opt["speed"]), linestyle="--", label=f"Scenario optimum ≈ {opt['speed']:.2f} kn")
-    ax.set_xlabel("Speed (knots)")
-    ax.set_ylabel("Scenario total fuel (L)")
-    ax.set_title("Scenario fuel vs speed")
-    ax.legend()
-    st.pyplot(fig)
+    chart_df = res_df.set_index("speed")[["total_fuel"]]
+    st.line_chart(chart_df, y="total_fuel", height=350)
 
     st.subheader("Scenario table")
     st.dataframe(res_df.round(2), use_container_width=True)
