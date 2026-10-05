@@ -6,7 +6,7 @@ A public-data proof of concept demonstrating how a maritime professional can com
 
 ## 🚀 Live App
 
-**Try the interactive Streamlit application:** [Open Voyage Fuel Optimizer](https://voyage-fuel-optimizer.streamlit.app/)
+**Try the interactive Streamlit application:** [Open Voyage Fuel Optimizer](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
 
 The app lets you enter a voyage scenario, estimate fuel consumption, and explore speed/ETA sensitivity. The result is a portfolio proof of concept and should not be interpreted as a production vessel-performance recommendation.
 
