@@ -33,7 +33,7 @@ The project uses `data/ship_fuel_efficiency.csv` with 1,440 records and fields i
 - weather condition
 - engine efficiency
 
-The current model does **not** use ship_id as a predictive feature.
+The current model does **not** use `ship_id` as a predictive feature.
 
 ## Modelling approach
 
@@ -53,6 +53,22 @@ The original model evaluation reports approximately:
 
 These figures are useful as a portfolio baseline, but they should not be interpreted as production-grade vessel-performance accuracy. Random train/test splitting can overstate generalisation when observations are related by vessel, route or repeated operating conditions.
 
+## Validation strategy
+
+The repository now includes a stronger validation path in `scripts/validate_generalisation.py`.
+
+Instead of randomly splitting individual rows, the validation script holds out entire vessels using `ship_id` as a **grouping variable only**. The model therefore has to predict observations from vessels it did not see during training.
+
+The script also reports a simple training-set mean baseline.
+
+This is an important distinction for a vessel-performance portfolio project:
+
+**random row split → “Can the model fit similar observations?”**
+
+**vessel holdout → “Can the model generalise to an unseen vessel?”**
+
+The vessel-holdout result should be reported alongside the original random-split result rather than silently replacing it.
+
 ## Voyage-speed scenario analysis
 
 The application separates two concepts:
@@ -62,9 +78,7 @@ The application separates two concepts:
 
 For a reference speed (v_ref), the model-predicted voyage fuel is converted to an implied reference fuel rate using the supplied distance and reference speed. The rate is then scaled as:
 
-[
-F_{day}(v)=F_{day}(v_{ref})(v/v_{ref})^3
-]
+`F_day(v) = F_day(v_ref) × (v / v_ref)^3`
 
 and total voyage fuel is calculated from voyage time.
 
@@ -101,7 +115,7 @@ A production system would also need vessel-specific baselines, data-quality cont
 
 This project demonstrates an end-to-end workflow:
 
-**maritime problem → data preparation → predictive modelling → scenario analysis → visual decision support → production-gap assessment**
+**maritime problem → data preparation → predictive modelling → validation design → scenario analysis → visual decision support → production-gap assessment**
 
 The most important capability demonstrated is not the model score alone. It is the ability to connect a machine-learning result to a maritime operational question while clearly identifying assumptions and limitations.
 
@@ -113,6 +127,7 @@ The most important capability demonstrated is not the model score alone. It is t
 - `models/` — trained model artifact
 - `app/streamlit_app.py` — interactive scenario application
 - `retrain_model.py` — model training script
+- `scripts/validate_generalisation.py` — vessel-holdout validation
 - `docs/model_card.md` — modelling assumptions, limitations and production gaps
 
 ## Running locally
@@ -124,20 +139,25 @@ pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
+To run the stronger validation:
+
+```bash
+python scripts/validate_generalisation.py
+```
+
 ## Future development
 
-The next technical steps for a stronger maritime analytics POC are:
+The next technical milestones are deliberately focused on evidence rather than adding complexity:
 
-1. add vessel-specific and time-based validation;
-2. test route/vessel holdout performance;
-3. normalise fuel metrics by distance and time where source definitions permit;
-4. compare against simple baselines;
-5. add uncertainty/error bands;
-6. incorporate AIS and weather data;
-7. develop vessel-specific speed-power relationships;
-8. add emissions and cost optimisation;
-9. build data-quality and anomaly monitoring; and
-10. design a fleet-level dashboard and recommendation workflow.
+1. run and document the vessel-holdout results;
+2. add uncertainty/error analysis;
+3. add route-holdout validation;
+4. normalise fuel metrics by distance/time where source definitions permit;
+5. incorporate AIS and weather data;
+6. develop vessel-specific speed-power relationships;
+7. add emissions and cost optimisation;
+8. build data-quality and anomaly monitoring; and
+9. design a fleet-level dashboard and recommendation workflow.
 
 ## About
 
