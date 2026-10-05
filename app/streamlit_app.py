@@ -16,29 +16,65 @@ st.caption(
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "models" / "fuel_model_rf_v1.joblib"
 
-@st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
-
-model = load_model()
+DATA_PATH = BASE_DIR / "data" / "ship_fuel_efficiency.csv"
 
 feature_cols = [
     "ship_type", "route_id", "fuel_type", "weather_conditions",
     "month", "distance", "engine_efficiency"
 ]
+cat_cols = ["ship_type", "route_id", "fuel_type", "weather_conditions", "month"]
+num_cols = ["distance", "engine_efficiency"]
+
+@st.cache_data
+def load_data():
+    df = pd.read_csv(DATA_PATH)
+    required = feature_cols + ["fuel_consumption"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Dataset is missing required columns: {missing}")
+    return df.dropna(subset=required).copy()
+
+@st.cache_resource
+def load_model():
+    # Prefer the saved model for fast startup. If the serialized artifact was
+    # created with an incompatible scikit-learn/joblib version, retrain from
+    # the repository dataset so the Streamlit app remains usable.
+    try:
+        return joblib.load(MODEL_PATH), "saved model"
+    except Exception as exc:
+        from sklearn.compose import ColumnTransformer
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import OneHotEncoder
+
+        df = load_data()
+        preprocess = ColumnTransformer(
+            transformers=[
+                ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
+                ("num", "passthrough", num_cols),
+            ]
+        )
+        pipeline = Pipeline([
+            ("preprocess", preprocess),
+            ("model", RandomForestRegressor(
+                n_estimators=150, random_state=42, n_jobs=-1
+            )),
+        ])
+        pipeline.fit(df[feature_cols], df["fuel_consumption"])
+        return pipeline, f"runtime retraining (saved model unavailable: {type(exc).__name__})"
+
+model, model_status = load_model()
+dataset = load_data()
+
+st.caption(f"Model status: {model_status}")
 
 st.sidebar.header("Voyage inputs")
 
-ship_type = st.sidebar.selectbox("Ship type", ["Oil Service Boat"])
-fuel_type = st.sidebar.selectbox("Fuel type", ["HFO", "Diesel"])
-route_id = st.sidebar.text_input("Route", "Port Harcourt-Lagos")
-weather = st.sidebar.selectbox("Weather conditions", ["Calm", "Moderate", "Stormy"], index=1)
-month = st.sidebar.selectbox(
-    "Month",
-    ["January", "February", "March", "April", "May", "June",
-     "July", "August", "September", "October", "November", "December"],
-    index=1,
-)
+ship_type = st.sidebar.selectbox("Ship type", sorted(dataset["ship_type"].unique()))
+fuel_type = st.sidebar.selectbox("Fuel type", sorted(dataset["fuel_type"].unique()))
+route_id = st.sidebar.selectbox("Route", sorted(dataset["route_id"].unique()))
+weather = st.sidebar.selectbox("Weather conditions", sorted(dataset["weather_conditions"].unique()))
+month = st.sidebar.selectbox("Month", list(dataset["month"].unique()))
 distance = st.sidebar.number_input("Distance (nautical miles)", min_value=1.0, value=128.52, step=0.01)
 engine_efficiency = st.sidebar.number_input(
     "Engine efficiency (%)", min_value=0.0, max_value=100.0, value=92.98, step=0.01
