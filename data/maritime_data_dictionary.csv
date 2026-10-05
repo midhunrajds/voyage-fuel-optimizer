@@ -1,0 +1,29 @@
+field_name,maritime_concept,unit,source,available_in_demo,required_for_production,reference,description
+ship_id,Vessel identifier,ID,Public dataset,Yes,Yes,SMN/ISO 19848 concept,Used to group repeated observations for validation; not used as a predictive feature
+ship_type,Ship type,code,Public dataset,Yes,Yes,SVD ship information,Descriptive vessel category
+route_id,Voyage route,code,Public dataset,Yes,Yes,SVD voyage information,Route reference in the demonstration dataset
+month,Reporting period,month,Public dataset,Yes,Yes,SVD time/voyage context,Month retained as a categorical feature
+distance,Sailed distance,NM,Public dataset,Yes,Yes,SVD voyage information,Distance associated with the voyage record
+fuel_type,Fuel type,code,Public dataset,Yes,Yes,SVD fuel information,Fuel category
+fuel_consumption,Fuel consumed,L,Public dataset,Yes,Yes,SVD fuel consumer concept,Target variable; source definition must be verified before interpreting as a rate
+CO2_emissions,CO2 emissions,kg,Public dataset,Yes,Yes,SVD emissions reporting concept,Existing dataset field; production calculation should use documented methodology
+weather_conditions,Weather condition,category,Public dataset,Yes,Yes,SVD weather concept,Coarse public-data weather category
+engine_efficiency,Engine efficiency,%,Public dataset,Yes,Yes,Dataset-specific proxy,Demonstration feature; not a substitute for engine telemetry
+voyage_id,Voyage identifier,ID,Production requirement,No,Yes,SVD voyage information,Unique voyage reference
+segment_id,Voyage segment identifier,ID,Production requirement,No,Yes,ISTS VPR model,Links performance observations to one voyage segment
+operational_mode,Operational mode,code,Production requirement,No,Yes,ISTS VPR model,Examples include sailing port approach in port anchor and canal
+exception_type,Performance exception,code,Production requirement,No,Yes,ISTS VPR model,Distinguishes deviations and exclusions from normal segment performance
+eta,Estimated time of arrival,datetime,Production requirement,No,Yes,ISTS VPR model,Operational schedule context
+speed_over_ground,Vessel speed over ground,kn,Production requirement,No,Yes,SVD/IMO data concepts,Operational speed measurement
+speed_through_water,Vessel speed through water,kn,Production requirement,No,Yes,SVD/IMO data concepts,Needed for performance analysis and slip-related context
+draft,Vessel draught,m,Production requirement,No,Yes,SVD/IMO data concepts,Loading condition affecting resistance and consumption
+trim,Vessel trim,m,Production requirement,No,Yes,Production performance model,Loading and attitude variable
+engine_load,Main engine load,%,Production requirement,No,Yes,Production telemetry,Operating load context
+rpm,Engine RPM,rpm,Production requirement,No,Yes,Production telemetry,Propulsion operating point
+wind_speed,Wind speed,kn,Production requirement,No,Yes,SVD weather concept,Environmental condition for normalisation
+sea_state,Sea state,code,Production requirement,No,Yes,SVD weather concept,Environmental condition for normalisation
+current,Current speed,kn,Production requirement,No,Yes,Weather/ocean data,Environmental condition affecting speed and fuel
+fuel_rob,Fuel remaining onboard,volume or mass,Production requirement,No,Yes,ISTS VPR model,Fuel inventory context
+fuel_used,Fuel used by consumer,volume or mass,Production requirement,No,Yes,ISTS VPR model,Consumption by fuel consumer during reporting period
+codebook_reference,Data definition reference,ID,Production requirement,No,Yes,Data ownership/codebook guidance,Documents meaning unit format range precision and sampling of a signal
+data_timestamp,Observation timestamp,ISO 8601,Production requirement,No,Yes,SVD/ISO 8601 concept,Time reference for joining shipboard and external data

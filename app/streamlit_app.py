@@ -3,9 +3,14 @@ import numpy as np
 import streamlit as st
 from pathlib import Path
 
+from performance import grouped_oof_analysis
+
 st.set_page_config(page_title="Voyage Fuel Optimizer", page_icon="🚢", layout="wide")
 
 st.title("🚢 Voyage Fuel Optimizer")
+
+st.markdown("### Voyage Performance Analytics")
+st.caption("Version 2 adds grouped out-of-fold expected-fuel analysis to compare actual and expected consumption without training on observations from the same vessel.")
 st.caption(
     "Public-data proof of concept: ML fuel estimate + transparent speed/ETA scenario analysis. "
     "Not a production vessel-performance model."
@@ -134,6 +139,53 @@ else:
 st.warning(
     "Interpretation: this is a portfolio proof of concept. The speed optimisation is not a "
     "validated vessel-specific speed-power model and should not be used for real voyage decisions."
+)
+
+
+st.markdown("---")
+st.subheader("Actual vs expected fuel performance")
+
+with st.expander("Grouped vessel validation and performance deviation", expanded=False):
+    st.write(
+        "Expected fuel is generated with 5-fold GroupKFold validation using ship_id "
+        "as the grouping variable. The vessel identifier is not used as a model feature."
+    )
+    performance_df, performance_metrics = grouped_oof_analysis(dataset)
+
+    p1, p2, p3 = st.columns(3)
+    p1.metric("Grouped OOF R²", f"{performance_metrics['r2']:.3f}")
+    p2.metric("Grouped OOF MAE", f"{performance_metrics['mae']:,.0f} L")
+    p3.metric("Grouped OOF RMSE", f"{performance_metrics['rmse']:,.0f} L")
+
+    st.write(
+        "Positive deviation means actual fuel was higher than the model's expected "
+        "fuel estimate for that observation; negative deviation means actual fuel "
+        "was lower."
+    )
+
+    deviation_chart = performance_df[
+        ["fuel_deviation_pct"]
+    ].dropna().clip(-100, 100)
+    st.line_chart(deviation_chart.reset_index(drop=True), height=250)
+
+    summary = (
+        performance_df.groupby("ship_id", as_index=False)
+        .agg(
+            observations=("fuel_consumption", "size"),
+            mean_actual_fuel=("fuel_consumption", "mean"),
+            mean_expected_fuel=("expected_fuel", "mean"),
+            mean_deviation_pct=("fuel_deviation_pct", "mean"),
+            mean_absolute_error=("absolute_error", "mean"),
+        )
+        .sort_values("mean_deviation_pct", ascending=False)
+    )
+    st.dataframe(summary.round(2), use_container_width=True)
+
+st.info(
+    "Performance interpretation is intentionally conservative: a positive fuel "
+    "deviation is a screening signal, not proof of technical underperformance. "
+    "Production analysis would need vessel-specific data, environmental normalisation, "
+    "voyage segments, operational modes and exception handling."
 )
 
 st.markdown("---")
