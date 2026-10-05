@@ -4,6 +4,12 @@ A public-data proof of concept demonstrating how a maritime professional can com
 
 > **Important:** This is a data-science portfolio project, not a production vessel-performance system. The dataset is public/synthetic-style tabular voyage data and does not represent live operational data from a specific vessel.
 
+## 🚀 Live App
+
+**Try the interactive Streamlit application:** [Open Voyage Fuel Optimizer](https://voyage-fuel-optimizer.streamlit.app/)
+
+The app lets you enter a voyage scenario, estimate fuel consumption, and explore speed/ETA sensitivity. The result is a portfolio proof of concept and should not be interpreted as a production vessel-performance recommendation.
+
 ## Problem
 
 Ship operators continuously balance fuel consumption, voyage time and schedule requirements. A useful decision-support workflow should be able to:
