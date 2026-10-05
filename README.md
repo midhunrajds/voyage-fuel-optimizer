@@ -111,11 +111,45 @@ A production vessel-performance solution would normally combine sources such as:
 
 A production system would also need vessel-specific baselines, data-quality controls, anomaly detection, model monitoring, explainability, uncertainty estimates and operational workflows for recommendations.
 
+## Voyage Performance Analytics — Version 2
+
+The project now extends beyond a simple fuel prediction question toward a vessel-performance workflow:
+
+**actual fuel → expected fuel → performance deviation → operational context**
+
+The new performance layer uses grouped out-of-fold validation, with `ship_id` used only to keep observations from the same vessel in the same validation fold. This reduces the risk of presenting a random row split as evidence of generalisation to unseen vessels.
+
+The application now includes an optional **Actual vs expected fuel performance** section. It reports grouped out-of-fold metrics and shows vessel-level fuel-deviation summaries.
+
+A separate script, `scripts/performance_analysis.py`, produces `outputs/voyage_performance_oof.csv` with:
+
+- actual fuel;
+- expected fuel;
+- absolute error;
+- fuel deviation;
+- percentage fuel deviation.
+
+Positive fuel deviation means actual consumption is above the model's expected value for that observation. It is a screening signal, not proof of technical underperformance.
+
+### Maritime data model
+
+The repository also includes `data/maritime_data_dictionary.csv`. It separates fields that exist in the public demonstration dataset from fields required for a real vessel-performance implementation.
+
+The data dictionary and design notes are informed by the Smart Maritime Network Standardised Vessel Dataset and the ISTS Voyage Performance Report model. The project does **not** claim to implement the complete SVD, IMO Compendium or a production VPR system.
+
+The supporting design document is `docs/voyage_performance_analytics.md`.
+
+### Why the distinction matters
+
+A vessel consuming more fuel is not automatically performing poorly. A meaningful performance comparison needs context such as speed, distance, draft, trim, weather, sea state, current, engine load, operational mode and exceptions.
+
+The current public dataset does not contain enough information for validated vessel-specific performance modelling. The project therefore makes the production-data gap explicit rather than inventing missing operational data.
+
 ## Portfolio value
 
 This project demonstrates an end-to-end workflow:
 
-**maritime problem → data preparation → predictive modelling → validation design → scenario analysis → visual decision support → production-gap assessment**
+**maritime problem → data preparation → predictive modelling → grouped validation → actual-vs-expected performance → scenario analysis → production-gap assessment**
 
 The most important capability demonstrated is not the model score alone. It is the ability to connect a machine-learning result to a maritime operational question while clearly identifying assumptions and limitations.
 
@@ -128,6 +162,10 @@ The most important capability demonstrated is not the model score alone. It is t
 - `app/streamlit_app.py` — interactive scenario application
 - `retrain_model.py` — model training script
 - `scripts/validate_generalisation.py` — vessel-holdout validation
+- `scripts/performance_analysis.py` — grouped out-of-fold actual-vs-expected analysis
+- `data/maritime_data_dictionary.csv` — demonstration vs production maritime data mapping
+- `docs/voyage_performance_analytics.md` — Version 2 design and production-data rationale
+- `app/performance.py` — grouped out-of-fold performance calculations
 - `docs/model_card.md` — modelling assumptions, limitations and production gaps
 
 ## Running locally
@@ -147,17 +185,18 @@ python scripts/validate_generalisation.py
 
 ## Future development
 
-The next technical milestones are deliberately focused on evidence rather than adding complexity:
+The next stages are deliberately focused on maritime evidence and decision support rather than adding model complexity:
 
-1. run and document the vessel-holdout results;
-2. add uncertainty/error analysis;
-3. add route-holdout validation;
-4. normalise fuel metrics by distance/time where source definitions permit;
-5. incorporate AIS and weather data;
-6. develop vessel-specific speed-power relationships;
-7. add emissions and cost optimisation;
-8. build data-quality and anomaly monitoring; and
-9. design a fleet-level dashboard and recommendation workflow.
+1. complete and document vessel-holdout and grouped out-of-fold evidence;
+2. add uncertainty and error analysis;
+3. introduce route-holdout validation;
+4. normalise fuel metrics only where source definitions support it;
+5. incorporate AIS, weather and ocean data;
+6. introduce vessel-specific speed-power relationships;
+7. add emissions and cost analysis;
+8. add voyage segments, operational modes and exception handling using real or appropriately labelled data;
+9. build data-quality and anomaly monitoring; and
+10. evolve toward fleet-level benchmarking and recommendation workflows.
 
 ## About
 
