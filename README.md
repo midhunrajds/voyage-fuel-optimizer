@@ -1,134 +1,140 @@
-# Voyage Fuel Optimizer
+# Voyage Fuel Optimizer — Maritime Fuel Consumption & Voyage Decision-Support POC
 
-Predicting and optimizing ship fuel consumption for Nigerian waterways using machine learning and simple voyage optimization.
+A public-data proof of concept demonstrating how a maritime professional can combine machine learning, vessel-domain knowledge and scenario analysis to explore fuel-consumption and voyage-speed decisions.
 
-## Overview
+> **Important:** This is a data-science portfolio project, not a production vessel-performance system. The dataset is public/synthetic-style tabular voyage data and does not represent live operational data from a specific vessel.
 
-This project builds a data-driven fuel consumption model and uses it to find fuel-optimal speeds for given voyage scenarios (route, weather, engine efficiency, ETA constraint).
+## Problem
 
-Key components:
-- **Data:** Ship fuel consumption dataset for Nigerian waterways (`data/ship_fuel_efficiency.csv`).
-- **Model:** Random Forest Regressor predicting `fuel_consumption` from ship/route/weather/engine features.
-- **Optimizer:** Simple voyage optimizer that trades off speed, time, and fuel using a cubic speed–fuel relationship.
+Ship operators continuously balance fuel consumption, voyage time and schedule requirements. A useful decision-support workflow should be able to:
+
+- estimate fuel consumption for a voyage scenario;
+- test how speed and ETA constraints affect a voyage;
+- expose the assumptions behind an optimisation result; and
+- identify what additional operational data would be required before deployment.
+
+## Dataset
+
+The project uses `data/ship_fuel_efficiency.csv` with 1,440 records and fields including:
+
+- vessel/ship identifier and ship type
+- route
+- month
+- distance
+- fuel type
+- fuel consumption
+- CO₂ emissions
+- weather condition
+- engine efficiency
+
+The current model does **not** use ship_id as a predictive feature.
+
+## Modelling approach
+
+The baseline model is a scikit-learn pipeline containing:
+
+- one-hot encoding for categorical variables;
+- passthrough numeric variables;
+- Random Forest Regression with 300 trees.
+
+The current target is `fuel_consumption` **per voyage record**. It should not be interpreted as a directly observed fuel-per-day or fuel-per-nautical-mile measure unless the source dataset defines it that way.
+
+The original model evaluation reports approximately:
+
+- R²: 0.93
+- MAE: 342 L
+- RMSE: 461 L
+
+These figures are useful as a portfolio baseline, but they should not be interpreted as production-grade vessel-performance accuracy. Random train/test splitting can overstate generalisation when observations are related by vessel, route or repeated operating conditions.
+
+## Voyage-speed scenario analysis
+
+The application separates two concepts:
+
+1. **ML estimate:** predicted fuel consumption for the supplied voyage scenario.
+2. **Speed sensitivity:** a transparent physics-inspired cubic relationship used only as a scenario assumption.
+
+For a reference speed (v_ref), the model-predicted voyage fuel is converted to an implied reference fuel rate using the supplied distance and reference speed. The rate is then scaled as:
+
+[
+F_{day}(v)=F_{day}(v_{ref})(v/v_{ref})^3
+]
+
+and total voyage fuel is calculated from voyage time.
+
+This makes the units internally consistent, but the result remains an **assumption-driven scenario estimate**. The dataset does not establish a vessel-specific speed-power curve.
+
+## Example
+
+For the example Port Harcourt–Lagos scenario with a 12-hour ETA constraint, the earlier notebook produced an optimum around 10.75 knots and approximately 1,496 L total fuel.
+
+That result should be read as:
+
+> “Under this dataset and the stated cubic speed-scaling assumption, the lowest feasible speed meeting the ETA constraint is approximately 10.75 knots.”
+
+It should **not** be presented as the real optimum operating speed of a commercial vessel.
+
+## Why this matters in real vessel-performance work
+
+A production vessel-performance solution would normally combine sources such as:
+
+- noon reports / daily reports;
+- AIS position and speed data;
+- engine and machinery parameters;
+- RPM and load;
+- draft, displacement and trim;
+- wind, waves, currents and weather routing;
+- hull/propeller condition and fouling;
+- bunker delivery and consumption records;
+- vessel-specific speed-power curves;
+- voyage plan, ETA and charter-party constraints.
+
+A production system would also need vessel-specific baselines, data-quality controls, anomaly detection, model monitoring, explainability, uncertainty estimates and operational workflows for recommendations.
+
+## Portfolio value
+
+This project demonstrates an end-to-end workflow:
+
+**maritime problem → data preparation → predictive modelling → scenario analysis → visual decision support → production-gap assessment**
+
+The most important capability demonstrated is not the model score alone. It is the ability to connect a machine-learning result to a maritime operational question while clearly identifying assumptions and limitations.
 
 ## Repository structure
 
-- `data/` – Raw data (e.g., `ship_fuel_efficiency.csv`).
-- `notebooks/` – Analysis and modeling notebooks.
-  - `01_eda_and_model_selection.ipynb` – EDA, preprocessing, model comparison, final model.
-  - `02_voyage_optimizer.ipynb` – Voyage optimization with speed–fuel scaling.
-- `models/` – Trained model artifacts (e.g., `fuel_model_rf_v1.joblib`).
-- `src/` – Helper modules (optional).
-- `app/` – Streamlit app (optional, Phase 2).
+- `data/` — public project dataset
+- `notebooks/01_eda_and_model_selection.ipynb` — EDA and model comparison
+- `notebooks/02_voyage_optimizer.ipynb` — speed/ETA scenario analysis
+- `models/` — trained model artifact
+- `app/streamlit_app.py` — interactive scenario application
+- `retrain_model.py` — model training script
+- `docs/model_card.md` — modelling assumptions, limitations and production gaps
 
-## Quick start
+## Running locally
 
-1. Clone the repo:
-   ```bash
-   git clone git@github.com:midhunrajds/voyage-fuel-optimizer.git
-   cd voyage-fuel-optimizer
-   ```
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
 
-2. Create a virtual environment and install dependencies:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## Future development
 
-3. Open the notebooks:
-   ```bash
-   jupyter notebook
-   ```
-   Then open:
-   - `notebooks/01_eda_and_model_selection.ipynb`
-   - `notebooks/02_voyage_optimizer.ipynb`
+The next technical steps for a stronger maritime analytics POC are:
 
-## Model summary
-
-**Task:** Predict ship fuel consumption per voyage record.
-
-**Model:** Random Forest Regressor (300 trees) in a scikit-learn pipeline with:
-- OneHotEncoder for categorical features: `ship_type`, `route_id`, `fuel_type`, `weather_conditions`, `month`
-- Numeric features: `distance`, `engine_efficiency`
-
-**Target:** `fuel_consumption`
-
-**Performance (5-fold CV on training data):**
-- R² ≈ 0.93
-- MAE ≈ 342 liters
-- RMSE ≈ 461 liters
-
-**Interpretation:** The model explains ~93% of the variance in fuel consumption, with an average absolute error of ~342 liters. This provides a strong baseline for scenario analysis and voyage optimization.
-
-## Voyage optimization
-
-Using the fuel model plus a cubic speed–fuel scaling:
-
-$$
-\text{fuel\_per\_day}(v) = \text{fuel\_base} \times \left(\frac{v}{v_{\text{ref}}}\right)^3
-$$
-
-the optimizer finds the speed that minimizes total fuel for a given route and ETA constraint.
-
-**Example result (Port Harcourt–Lagos, ETA ≤ 12h):**
-- Optimal speed: ~10.75 knots
-- Travel time: ~12 hours
-- Total fuel: ~1496 liters
-
-The optimizer typically favors **slow steaming** (lowest feasible speed that meets the ETA), which aligns with industry practice for reducing bunker costs and emissions.
-
-## How to run the optimizer
-
-Open `notebooks/02_voyage_optimizer.ipynb` and follow the cells. The notebook:
-- Loads the trained model from `models/fuel_model_rf_v1.joblib`.
-- Defines a voyage (route, distance, weather, engine efficiency, ETA).
-- Searches over speeds, applies cubic scaling, and selects the fuel-optimal speed.
-- Plots fuel vs speed curves.
-
-## Next steps / extensions
-
-Possible extensions:
-- Add more routes and weather scenarios.
-- Build a CO₂-focused optimizer using `CO2_emissions`.
-- Wrap the optimizer in a Streamlit app for interactive exploration.
-- Incorporate real AIS-based routes and marine weather data.
-
-## License
-
-MIT.
+1. add vessel-specific and time-based validation;
+2. test route/vessel holdout performance;
+3. normalise fuel metrics by distance and time where source definitions permit;
+4. compare against simple baselines;
+5. add uncertainty/error bands;
+6. incorporate AIS and weather data;
+7. develop vessel-specific speed-power relationships;
+8. add emissions and cost optimisation;
+9. build data-quality and anomaly monitoring; and
+10. design a fleet-level dashboard and recommendation workflow.
 
 ## About
 
-This project was developed as an independent data science project to showcase end-to-end skills: data cleaning, EDA, modeling, and a simple optimization application in the marine/shipping domain.
+Independent maritime data-science project by Midhun Raj, combining marine engineering and technical-superintendent experience with data analytics, machine learning and maritime digitalisation.
 
-**Interactive demo:** [Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
-
-
-## How to use the app
-
-Open the live demo:  
-[Voyage Fuel Optimizer (Streamlit)](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
-
-1. In the left sidebar, set your voyage inputs:
-   - Ship type, fuel type, and route (e.g., “Port Harcourt–Lagos”)
-   - Weather conditions and month
-   - Distance (nautical miles) and engine efficiency
-   - Maximum travel time (ETA, in hours)
-2. The app computes fuel consumption over a range of feasible speeds and applies cubic speed–fuel scaling.
-3. Review the results:
-   - Optimal speed, travel time, fuel/day, and total fuel
-   - “Total fuel vs speed” and “Fuel/day vs speed” plots
-   - A sample table with computed values for each candidate speed
-
-Use the app to explore how route, weather, engine efficiency, and ETA constraints affect the fuel-optimal speed.
-
-## Notebook previews
-
-### 01 EDA and model selection
-
-![01 EDA and model selection](assets/01_eda_and_model_selection.png)
-
-### 02 Voyage optimizer
-
-![02 Voyage optimizer](assets/02_voyage_optimizer.png)
+GitHub: https://github.com/midhunrajds
