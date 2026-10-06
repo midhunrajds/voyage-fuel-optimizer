@@ -1,148 +1,210 @@
-# Voyage Performance Analytics — Version 2 Design
+# Voyage Performance Analytics — Version 2
 
-## Purpose
+## Why I extended the project
 
-Version 2 extends the Voyage Fuel Optimizer from a predictive fuel-consumption proof of concept into a voyage performance analytics case study.
+The first version of the project answered a straightforward prediction question:
 
-The goal is not to imply that the public dataset is a real vessel-performance dataset. Instead, the public data demonstrates the analytical workflow while the repository explicitly maps missing production data.
+> How much fuel does the model expect for a voyage record?
 
-## Maritime framing
+I wanted to take the project one step further and make the result closer to something a vessel-performance analyst could actually investigate.
 
-The Smart Maritime Network Standardised Vessel Dataset provides an open reference for common vessel operational and emissions data points. The ISTS voyage-performance report describes voyage performance in terms of voyages, segments, operational modes, events and exceptions. The accompanying data-access guidance highlights the importance of data access, codebooks, normalisation and historical-data storage.
+That led to a second question:
 
-The project therefore separates:
+> How does actual fuel consumption compare with what the model expected?
 
-1. Demonstration data — what the current public dataset actually contains.
-2. Maritime performance model — concepts required to interpret a voyage operationally.
-3. Production data requirements — additional signals required for real deployment.
+This is the main idea behind Version 2.
 
-## Core analytical question
+It is still a public-data portfolio project. The purpose is to demonstrate the approach, not to claim that the public dataset represents a real shipboard performance system.
 
-The central question changes from:
+## The basic idea
 
-How much fuel will this voyage consume?
+**actual fuel → expected fuel → deviation → investigation**
 
-to:
+The expected value comes from grouped out-of-fold predictions.
 
-How does actual fuel consumption compare with expected fuel consumption under comparable operating conditions?
+If:
 
-Raw consumption alone does not establish poor performance. Speed, distance, loading condition, weather, sea state, current, machinery condition, operational mode and exceptions can affect expected consumption.
+`actual fuel > expected fuel`
 
-## Performance workflow
+the observation has a positive fuel deviation.
 
-Voyage / segment
-→ operational and environmental context
-→ expected fuel model
-→ actual fuel
-→ performance deviation
-→ operational interpretation
+That is a reason to look at the observation more closely. It is not, by itself, a diagnosis.
 
-For a production system, the expected-fuel model should be trained and validated against appropriate vessel and voyage data. The current public-data implementation is a portfolio demonstration only.
+For example, a real investigation might ask:
 
-## Validation
+- Was the vessel operating at a different speed?
+- Was the draft or trim different?
+- Was there heavy weather or adverse current?
+- Was the vessel in a different operating mode?
+- Was there a machinery or hull condition issue?
+- Was the fuel measurement itself reliable?
+- Was there an operational exception or voyage deviation?
 
-The project keeps the original random row split as a baseline, but adds vessel-grouped validation because repeated observations from the same vessel can make a random split look more generalisable than it really is.
+The current dataset cannot answer most of those questions. That is one of the main findings of the project.
 
-ship_id is used as a grouping variable for validation, not as a predictive feature.
+## Why I used vessel-grouped validation
 
-The repository also provides an out-of-fold performance-analysis script. It creates predictions for observations that were not used to train the corresponding model and supports calculation of actual fuel, expected fuel, absolute error and percentage deviation.
+The dataset contains repeated observations from the same vessels.
 
-No vessel-holdout or out-of-fold metric should be described as production accuracy.
+A normal random row split can therefore be misleading. An observation from Vessel A may be in the test set while other observations from Vessel A are in the training set.
 
-## Voyage segments and exceptions
+For this reason I added:
 
-The ISTS model associates a Voyage Performance Report with a specific segment. The project adopts that conceptual structure without claiming that the public dataset contains true VPR records.
+- 5-fold GroupKFold using `ship_id`;
+- a separate test where 24 complete vessels were kept out of training.
 
-A future production dataset can represent:
+The model is still the same basic Random Forest approach. The change is mainly about asking a better validation question.
 
-- voyage and segment identifiers;
+## Current results
+
+### Grouped out-of-fold analysis
+
+1,440 records are assigned an out-of-fold expected-fuel value.
+
+| Metric | Result |
+|---|---:|
+| MAE | 610.52 L |
+| RMSE | 1,071.39 L |
+| R² | 0.9520 |
+| Mean deviation | -5.59 L |
+| Median deviation | 10.35 L |
+| Mean absolute deviation | 610.52 L |
+
+### Held-out vessels
+
+The separate test trains on 96 vessels and evaluates on 24 unseen vessels.
+
+| Metric | Result |
+|---|---:|
+| MAE | 790.97 L |
+| RMSE | 1,330.34 L |
+| R² | 0.9470 |
+
+The result is useful evidence that the model is not simply fitting the individual rows in the random split. It is still only evidence from this dataset, however.
+
+## What the project currently produces
+
+The performance workflow produces:
+
+- actual fuel;
+- expected fuel;
+- absolute error;
+- fuel deviation;
+- percentage fuel deviation;
+- vessel-level summaries.
+
+The Streamlit application provides an interactive view of the scenario and performance calculations.
+
+The GitHub Actions workflow runs the analysis scripts and stores the generated out-of-fold results as an artifact.
+
+## Voyage and segment context
+
+In real vessel-performance work, a voyage is not just one number for distance and one number for fuel.
+
+Performance can depend on what part of the voyage is being considered and what the vessel was doing during that period.
+
+I looked at the Intelligent Ship Transport System voyage-performance-report material to understand this idea. It uses voyage segments, operational modes and exceptions to give performance observations context.
+
+I use those concepts here only as a way to think about the next stage of the project.
+
+The public dataset does **not** contain true VPR records or a full voyage/segment model.
+
+A future real-data version could include:
+
+- voyage ID;
+- segment ID;
+- start/end time;
 - operational mode;
-- start/end timestamps;
-- distance and speed;
+- distance;
+- speed;
 - ETA;
-- cargo/loading context;
-- fuel consumers and fuel used;
-- fuel ROB;
-- weather;
-- exceptions such as heavy weather, deviation or technical problems.
+- fuel used;
+- fuel remaining onboard;
+- weather and sea state;
+- deviations or exceptions.
 
-These fields allow the performance layer to distinguish normal operation from observations that require contextual interpretation.
+That would make an actual-vs-expected result much easier to interpret.
 
 ## Data standardisation
 
-The project includes data/maritime_data_dictionary.csv as a lightweight portfolio data dictionary.
+I also looked at the Smart Maritime Network Standardised Vessel Dataset (SVD).
 
-It distinguishes:
+The useful lesson for this project was not the standard itself, but the importance of having clear definitions.
 
-- fields already present in the public demonstration dataset;
-- production fields that are currently unavailable;
-- maritime concepts associated with the field;
-- units and data-source assumptions;
-- relevant SVD/ISTS references.
+For example, in a real dataset I would need to know:
 
-This is intentionally a mapping aid, not a claim that the repository implements the full SVD or IMO Compendium.
+- what exactly a distance field represents;
+- whether speed is over ground or through water;
+- what period a fuel value covers;
+- which fuel consumer it belongs to;
+- what unit is used;
+- when the measurement was taken;
+- where the definition of the signal came from.
 
-## Data architecture
+The project therefore includes a lightweight data dictionary separating the fields available in the public dataset from fields I would want in a production implementation.
 
-A production architecture would need to preserve data meaning as well as values. The data-access guidance emphasises codebooks describing signals, protocols, formats, units, ranges, precision and intervals. Historical availability should also be explicitly planned rather than assumed.
+This project does **not** implement the SVD, IMO Compendium or ISO 19848.
 
-A practical production pipeline would resemble:
+## What is missing
 
-Onboard equipment / ship systems
-→ data acquisition and historian
-→ codebook / standardisation layer
-→ AIS + weather/ocean + voyage plan + fuel records
-→ voyage / segment data model
-→ data quality and normalisation
-→ performance model
-→ dashboard / alerts / decision support
+The main gaps are practical data gaps rather than missing machine-learning algorithms.
 
-## Production gap
+Examples include:
 
-The current dataset does not provide enough information to build a validated vessel-specific performance model.
-
-Important missing dimensions include:
-
+- reliable timestamps;
+- AIS;
+- speed through water;
 - draft and trim;
 - engine load and RPM;
-- speed through water;
-- wind, waves and currents;
-- detailed fuel-consumer measurements;
+- measured wind, waves and current;
+- fuel consumption by relevant consumer;
 - fuel ROB;
-- vessel-specific speed/power relationships;
+- vessel-specific speed/power information;
 - voyage segments and operational modes;
-- exceptions and deviations;
-- high-frequency machinery data;
-- robust timestamps and data lineage.
+- technical or operational exceptions;
+- historical data with enough consistency to establish a vessel baseline.
 
-The project treats these as explicit production requirements rather than inventing them.
+Without these, it would be difficult to turn a positive fuel deviation into a reliable operational conclusion.
 
-## Future versions
+## What I would do with real data
 
-### Version 2 — Voyage Performance Analytics
+I would take the following order rather than immediately choosing a more complicated ML model:
 
-- grouped/out-of-fold expected-fuel predictions;
-- actual-vs-expected deviation;
-- voyage/segment concepts;
-- operational modes and exceptions;
-- data dictionary;
+1. establish the data definitions and timestamps;
+2. build a reliable voyage/segment dataset;
+3. check data quality and missing values;
+4. align AIS, machinery, fuel and environmental data;
+5. establish vessel-specific expected-performance baselines;
+6. test the model on future periods and unseen vessels/routes;
+7. investigate abnormal deviations with operational context;
+8. add emissions and cost;
+9. introduce uncertainty around the predictions;
+10. build the recommendation layer only after the underlying performance signal is reliable.
+
+That is the intended direction of this portfolio project.
+
+## Boundary of Version 2
+
+Version 2 demonstrates:
+
+- vessel-grouped validation;
+- out-of-fold expected fuel;
+- actual-vs-expected comparison;
+- simple performance screening;
 - production-data gap analysis.
 
-### Version 3 — Voyage Optimisation Decision Support
+It does not demonstrate:
 
-- vessel-specific speed/power relationships;
-- weather and ocean data;
-- ETA/fuel/emissions trade-offs;
-- route alternatives;
-- uncertainty and confidence ranges;
-- fleet-level benchmarking.
+- a real vessel-performance baseline;
+- real-time data ingestion;
+- vessel-specific hydrodynamic modelling;
+- validated commercial fuel savings;
+- automated operational recommendations.
 
-### Version 4 — Production-oriented architecture
+The distinction is deliberate.
 
-- automated data ingestion;
-- data-quality monitoring;
-- anomaly detection;
-- model monitoring;
-- vessel-specific baselines;
-- auditable recommendations;
-- integration with operational workflows.
+## Next step
+
+The next portfolio project moves to a different data problem: AIS movement combined with environmental data.
+
+That project will look at vessel behaviour under different traffic and environmental conditions rather than repeating the same fuel-prediction exercise.
