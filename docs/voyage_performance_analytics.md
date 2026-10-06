@@ -24,7 +24,7 @@ The expected value comes from grouped out-of-fold predictions.
 
 If:
 
-`actual fuel > expected fuel`
+actual fuel > expected fuel
 
 the observation has a positive fuel deviation.
 
@@ -50,7 +50,7 @@ A normal random row split can therefore be misleading. An observation from Vesse
 
 For this reason I added:
 
-- 5-fold GroupKFold using `ship_id`;
+- 5-fold GroupKFold using ship_id;
 - a separate test where 24 complete vessels were kept out of training.
 
 The model is still the same basic Random Forest approach. The change is mainly about asking a better validation question.
@@ -80,7 +80,7 @@ The separate test trains on 96 vessels and evaluates on 24 unseen vessels.
 | RMSE | 1,330.34 L |
 | R² | 0.9470 |
 
-The result is useful evidence that the model is not simply fitting the individual rows in the random split. It is still only evidence from this dataset, however.
+The result is useful evidence from this dataset, but it is not a production accuracy claim.
 
 ## What the project currently produces
 
@@ -97,11 +97,11 @@ The Streamlit application provides an interactive view of the scenario and perfo
 
 The GitHub Actions workflow runs the analysis scripts and stores the generated out-of-fold results as an artifact.
 
-## Voyage and segment context
+## Thinking about a real voyage
 
 In real vessel-performance work, a voyage is not just one number for distance and one number for fuel.
 
-Performance can depend on what part of the voyage is being considered and what the vessel was doing during that period.
+Performance depends on what part of the voyage is being considered and what the vessel was doing during that period.
 
 I looked at the Intelligent Ship Transport System voyage-performance-report material to understand this idea. It uses voyage segments, operational modes and exceptions to give performance observations context.
 
@@ -125,25 +125,94 @@ A future real-data version could include:
 
 That would make an actual-vs-expected result much easier to interpret.
 
+## Standards and industry references I reviewed
+
+Because the project uses a simplified public dataset, I wanted to understand what would normally sit around the analytics in a real implementation.
+
+The main references I reviewed were:
+
+### SVD Version 2.0
+
+The Smart Maritime Network Standardised Vessel Dataset provides a common reference for vessel operational and emissions data, including standard data-point names, units, IMO Data Numbers and ISO 19848 Universal IDs.
+
+I used it mainly to identify the type of operational fields and definitions that are missing from the public dataset.
+
+Reference:
+https://smartmaritimenetwork.com/standardised-vessel-dataset-for-noon-reports/
+
+### IMO Compendium
+
+The IMO Compendium is a broader reference for harmonised maritime electronic data exchange. The version approved by FAL 50 in 2026 added a dataset for meteorological and oceanographic observations.
+
+That is particularly relevant to the direction of this project because measured environmental context becomes important when moving from simple fuel prediction to performance analysis and voyage optimisation.
+
+Reference:
+https://www.imo.org/en/ourwork/facilitation/pages/imocompendium.aspx
+
+### ISO 19848:2024 and ISO 19847:2024
+
+ISO 19848 covers standard data for shipboard machinery, equipment and operational information. ISO 19847 covers shipboard data servers used to collect and share field data.
+
+For this project, these standards helped me frame the gap between a simple field such as engine_efficiency and the actual machinery data I would expect in a real system.
+
+References:
+https://www.iso.org/standard/78262.html
+https://committee.iso.org/standard/78260.html
+
+### ISO 19030
+
+The ISO 19030 series provides methods and indicators for measuring changes in hull and propeller performance over time.
+
+This is useful conceptually because a real performance analysis should distinguish between absolute fuel consumption and a vessel's performance relative to an appropriate baseline and operating condition.
+
+References:
+https://www.iso.org/standard/63774.html
+https://www.iso.org/standard/63775.html
+https://www.iso.org/standard/63776.html
+
+### Data quality
+
+IACS Recommendation 183 addresses ship data quality, while DNV-RP-0497 provides a framework for data-quality assurance.
+
+These references reinforce an important lesson from this project: better analytics depends on reliable and well-defined data, not only on a more complicated model.
+
+References:
+https://iacs.org.uk/resolutions/recommendations/181-200/rec-183-new
+https://www.dnv.com/digital-trust/recommended-practices/data-quality-assurance-dnv-rp-0497/
+
+### Ship-shore and port-call data exchange
+
+ISO 18131:2025 covers publish-subscribe ship-shore operational-data communication.
+
+DCSA Port Call Standard 2.0 provides a current industry approach to standardised operational information exchange around port calls and Just-in-Time operations.
+
+These are not implemented in this POC. They are relevant when considering how a future performance system could connect to operational data beyond a static dataset.
+
+References:
+https://www.iso.org/standard/85180.html
+https://dcsa.org/newsroom/port-call-standard-update
+
+### Fuel and emissions reporting
+
+The IMO Data Collection System provides the regulatory context for ship fuel-oil consumption reporting.
+
+The Sea Cargo Charter also maintains structured reporting resources, including a JSON schema.
+
+These are useful background for thinking about consistent fuel and emissions data, but they are not implemented by this project.
+
+References:
+https://www.imo.org/en/ourwork/environment/pages/data-collection-system.aspx
+https://www.seacargocharter.org/resources/
+
+A fuller list is maintained in [Maritime Standards & Industry References Considered](maritime_standards_and_industry_references.md).
+
 ## Data standardisation
 
-I also looked at the Smart Maritime Network Standardised Vessel Dataset (SVD).
+The project includes a lightweight data dictionary separating the fields available in the public dataset from fields I would want in a production implementation.
 
-The useful lesson for this project was not the standard itself, but the importance of having clear definitions.
+The main lesson was simple: a value is not enough. I need to know what it means, its unit, when it was recorded, what period it covers and, where relevant, which vessel, voyage segment or consumer it belongs to.
 
-For example, in a real dataset I would need to know:
-
-- what exactly a distance field represents;
-- whether speed is over ground or through water;
-- what period a fuel value covers;
-- which fuel consumer it belongs to;
-- what unit is used;
-- when the measurement was taken;
-- where the definition of the signal came from.
-
-The project therefore includes a lightweight data dictionary separating the fields available in the public dataset from fields I would want in a production implementation.
-
-This project does **not** implement the SVD, IMO Compendium or ISO 19848.
+This project does **not** implement the SVD, IMO Compendium, ISO standards or the related reporting/exchange systems.
 
 ## What is missing
 
@@ -177,8 +246,8 @@ I would take the following order rather than immediately choosing a more complic
 5. establish vessel-specific expected-performance baselines;
 6. test the model on future periods and unseen vessels/routes;
 7. investigate abnormal deviations with operational context;
-8. add emissions and cost;
-9. introduce uncertainty around the predictions;
+8. consider established performance measurement methods where appropriate, such as ISO 19030;
+9. add emissions and cost;
 10. build the recommendation layer only after the underlying performance signal is reliable.
 
 That is the intended direction of this portfolio project.
@@ -199,7 +268,8 @@ It does not demonstrate:
 - real-time data ingestion;
 - vessel-specific hydrodynamic modelling;
 - validated commercial fuel savings;
-- automated operational recommendations.
+- automated operational recommendations;
+- compliance or certification against the referenced standards.
 
 The distinction is deliberate.
 
