@@ -203,3 +203,12 @@ The next stages are deliberately focused on maritime evidence and decision suppo
 Independent maritime data-science project by Midhun Raj, combining marine engineering and technical-superintendent experience with data analytics, machine learning and maritime digitalisation.
 
 GitHub: https://github.com/midhunrajds
+
+
+## SVD-aligned production architecture
+
+The project now includes `docs/svd_production_alignment.md`, which makes the production-data path explicit using the Smart Maritime Network Standardised Vessel Dataset (SVD) as a **data vocabulary/interoperability reference**, not as an optimisation algorithm. It connects the public POC to a practical architecture: onboard data → acquisition/historian → codebook/standardisation → SVD-aligned data → AIS/weather/ocean/voyage context → voyage/segment model → expected performance → actual-vs-expected analysis → decision support.
+
+This distinction is important: SVD describes what operational data points mean and how they can be standardised; voyage-performance concepts provide context around voyages, segments, modes and exceptions; analytics then uses those standardised inputs. The project explicitly avoids claiming full SVD, IMO Compendium, ISO 19848 or production VPR implementation.
+
+The production gap remains deliberate. The public dataset lacks important dimensions such as speed through water, draft/trim, engine load/RPM, detailed weather/ocean conditions, fuel-consumer data, timestamps, voyage segments and exception context. Those are documented as requirements rather than invented.
