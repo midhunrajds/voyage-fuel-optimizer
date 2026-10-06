@@ -194,19 +194,37 @@ Instead, I documented them as the next data requirements.
 
 ## What I learned from looking at real maritime data structures
 
-While working on the project I looked at the Smart Maritime Network Standardised Vessel Dataset (SVD) and the Intelligent Ship Transport System voyage-performance-report work.
+While working on the project I looked at the Smart Maritime Network Standardised Vessel Dataset (SVD), the IMO Compendium and the Intelligent Ship Transport System voyage-performance-report work.
 
 This was mainly useful for understanding how a real maritime dataset would be structured and why consistent definitions matter.
 
 For example, a production system needs to know whether a distance value is distance through water or over ground, what a fuel value represents, which consumer it belongs to, when the measurement was taken and how the signal is defined.
 
+The current IMO Compendium, approved by FAL 50 in 2026, also includes a dataset for meteorological and oceanographic observations. I found that particularly relevant because the project is moving toward the question of how operating and environmental conditions should be brought together for performance analysis. ([IMO Compendium](https://www.imo.org/en/ourwork/facilitation/pages/imocompendium.aspx), [FAL 50 changes](https://imocompendium.imo.org/public/IMO-Compendium/Current/Changes.pdf))
+
 The project does **not** implement the SVD, IMO Compendium, ISO 19848 or a production VPR system. They are reference points that helped me understand the gap between this public-data exercise and a real vessel-performance application.
 
-See:
+## Standards and industry references considered for a real implementation
 
-- [Voyage Performance Analytics](docs/voyage_performance_analytics.md)
-- [Production Data Architecture](docs/svd_production_alignment.md)
-- [Model Card](docs/model_card.md)
+I have kept a separate note explaining the main standards and industry references I reviewed, including their role in the production-data gap:
+
+- **SVD Version 2.0** — common vessel operational and emissions data definitions.
+- **IMO Compendium** — broader maritime data harmonisation and electronic information exchange; the 2026 version adds meteorological and oceanographic observations.
+- **ISO 19848:2024** — standard data for shipboard machinery, equipment and operational information.
+- **ISO 19847:2024** — shipboard data servers for collecting and sharing field data.
+- **ISO 16425:2024** — ship communication-network specifications.
+- **ISO 18131:2025** — publish-subscribe ship-shore operational data communication.
+- **ISO 28005-1:2024 / ISO 28005-3:2024** — electronic port-clearance data exchange.
+- **ISO 19030 Parts 1–3** — measurement of changes in hull and propeller performance.
+- **IACS Recommendation 183** — ship data quality.
+- **DNV-RP-0497** — data quality assurance.
+- **IMO DCS / MARPOL Annex VI** — fuel-consumption data collection and reporting context.
+- **DCSA Port Call Standard 2.0** — port-call and just-in-time operational data exchange.
+- **Sea Cargo Charter reporting schema** — structured voyage emissions reporting.
+
+These are **references considered**, not standards that this repository claims to implement or certify against.
+
+See [Maritime Standards & Industry References Considered](docs/maritime_standards_and_industry_references.md).
 
 ## Important limitations
 
@@ -235,7 +253,8 @@ This project should be read with the following limitations in mind:
 - `data/maritime_data_dictionary.csv` — current data and production data requirements
 - `docs/voyage_performance_analytics.md` — explanation of the performance-analysis extension
 - `docs/model_card.md` — model assumptions and limitations
-- `docs/svd_production_alignment.md` — notes on the production-data gap
+- `docs/svd_production_alignment.md` — production-data thinking and boundary
+- `docs/maritime_standards_and_industry_references.md` — standards and industry reference map
 
 ## Running locally
 
@@ -265,11 +284,11 @@ I would first improve the data and the performance definition:
 5. develop vessel-specific baselines;
 6. test time, vessel and route generalisation;
 7. investigate data quality and abnormal observations;
-8. add emissions and cost calculations;
-9. introduce uncertainty around predictions; and
+8. consider relevant performance measurement methods such as ISO 19030 where the vessel and use case are appropriate;
+9. add emissions and cost calculations;
 10. only then consider more advanced optimisation or fleet-scale deployment.
 
-That is the main boundary of this project: **the prototype demonstrates the analytical approach; a real system would depend heavily on the quality, history and context of the underlying vessel data.**
+That is the main boundary of this project: **the prototype demonstrates the analytical approach; a real system would depend heavily on the quality, history, definitions and context of the underlying vessel data.**
 
 ## About
 
