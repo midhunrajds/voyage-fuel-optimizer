@@ -1,55 +1,170 @@
-# SVD-Aligned Production Data Architecture
+# Production Data: What Would Be Needed Beyond This POC
 
-The project does not implement the complete SVD, IMO Compendium, ISO 19848 model, or a production VPR system. This document makes the production-data path explicit.
+## Why this document exists
 
-## Why SVD matters
+This project uses a public dataset that is much simpler than the data available in a real vessel-management or performance environment.
 
-The Smart Maritime Network SVD is a free, vendor-neutral reference for common vessel operational and emissions data points, including standard names, units, IMO Data Numbers and ISO 19848 Universal IDs. Version 2.0 also extends the model into emissions reporting.
+I wanted to document that gap rather than imply that the current model is ready for production.
 
-For this portfolio project, SVD is treated as a **data vocabulary and interoperability reference**, not as an analytics algorithm.
+While working through the project, I looked at the Smart Maritime Network Standardised Vessel Dataset (SVD) and related voyage-performance material to understand how real maritime operational data can be described and organised.
 
-## Production data flow
+For this project, SVD is a **reference for data definitions and interoperability**. It is not an optimisation algorithm and it is not implemented here.
 
-Onboard equipment / ship systems → data acquisition & historian → codebook / standardisation layer → SVD-aligned operational dataset → AIS + weather/ocean + voyage-plan context → voyage / segment model → data-quality & normalisation → expected-performance model → actual-vs-expected analysis → exceptions / alerts / decision support.
+## A simple way to think about a real system
 
-The standardisation layer should preserve source meaning while associating each field with a stable definition, unit, timestamp and lineage.
+A production vessel-performance workflow could look roughly like:
 
-## POC-to-production mapping
+**ship systems / onboard equipment**
 
-| Current POC field | Maritime concept | Production interpretation |
+→ data collection and historical storage
+
+→ common definitions, units and data quality checks
+
+→ AIS + weather/ocean + voyage information
+
+→ voyage/segment performance dataset
+
+→ expected-performance model
+
+→ actual vs expected
+
+→ investigation / alerts / decision support
+
+The exact architecture would depend on the vessel, shipowner, available equipment, data-access arrangements and the intended use case.
+
+I have not built this architecture in the project.
+
+## What the current dataset gives me
+
+| Current field | How I use it here | What would be needed in a real system |
 |---|---|---|
-| ship_id | Vessel identity | Stable vessel key for grouping, benchmarking and validation |
-| ship_type | Vessel type | Vessel classification/context |
-| route_id | Voyage/route context | Route or voyage reference |
-| distance | Distance sailed | Documented definition and unit required |
-| fuel_type | Fuel information | Fuel category/grade context |
-| fuel_consumption | Fuel consumed | Defined period, consumer and unit required |
-| CO2_emissions | Emissions | Reporting methodology must be retained |
-| weather_conditions | Weather | Public category; production should use measurable observations |
-| engine_efficiency | Machinery proxy | Demo proxy; production should use documented telemetry |
+| `ship_id` | Identify and group vessels | Stable vessel identity and history |
+| `ship_type` | Basic vessel context | Reliable vessel particulars/classification |
+| `route_id` | Route context | Voyage/route/segment identifiers |
+| `month` | Model feature | Reliable timestamps and reporting periods |
+| `distance` | Model feature | Clearly defined distance, source and unit |
+| `fuel_type` | Model feature | Standard fuel definition and grade/context |
+| `fuel_consumption` | Prediction target | Clearly defined fuel measurement, period and consumer |
+| `CO2_emissions` | Dataset field | Documented emissions calculation and source |
+| `weather_conditions` | Broad weather category | Measured wind, sea state, current and related data |
+| `engine_efficiency` | Dataset-specific feature | Actual machinery measurements such as load/RPM and other relevant signals |
 
-## Production dimensions to add
+The current fields are enough to demonstrate a modelling workflow. They are not enough to reproduce a full vessel-performance investigation.
 
-Important missing dimensions are voyage and segment identifiers; operational mode and exception/deviation context; ETA and timestamps; speed over ground and speed through water; draft and trim; engine load and RPM; wind, sea state and current; fuel remaining onboard and fuel used by consumer; and codebook/data-definition references.
+## Examples of important missing information
 
-These matter because expected fuel depends on operating context. A high deviation cannot be interpreted correctly without knowing whether the vessel was in heavy weather, at a different draft/trim, following a different speed profile, or affected by an operational or technical exception.
+### Voyage context
 
-## SVD and VPR are complementary
+A real dataset would benefit from:
 
-**SVD → what the data point means**
+- voyage ID;
+- segment ID;
+- timestamps;
+- operational mode;
+- ETA;
+- voyage plan;
+- deviations and exceptions.
 
-**VPR → where the data point sits in voyage/performance context**
+### Vessel and operating condition
 
-**Analytics → what we do with the standardised data**
+Useful information could include:
 
-This distinction prevents the project from implying that a data standard itself performs fuel optimisation.
+- draft;
+- trim;
+- displacement/loading condition;
+- speed over ground;
+- speed through water;
+- propeller/engine RPM;
+- engine load.
 
-## Current boundary
+### Environment
 
-The POC demonstrates predictive fuel modelling, vessel-grouped validation, out-of-fold expected-fuel estimates, actual-vs-expected deviation, scenario-based speed/ETA analysis, and production-data gap analysis.
+Depending on the use case:
 
-It does not demonstrate validated vessel-specific speed-power curves, real noon-report ingestion, real-time AIS/weather ingestion, SVD XML/JSON interchange, production data-quality monitoring, or production fleet recommendations.
+- wind;
+- waves/sea state;
+- current;
+- sea temperature;
+- other weather/ocean information.
 
-## Portfolio positioning
+### Fuel
 
-> A maritime analytics proof of concept that takes public voyage data from predictive modelling through expected-performance analysis and scenario decision support, while explicitly designing the data requirements and standardisation path needed for a production vessel-performance system.
+A production dataset would need clearly defined fuel measurements, potentially including:
+
+- fuel used by consumer;
+- fuel remaining onboard;
+- fuel type/grade;
+- bunker records;
+- measurement timestamps;
+- units and data source.
+
+### Data definitions
+
+This is easy to overlook.
+
+A value is much more useful when I know what it means, its unit, when it was recorded, its expected range and how it was generated.
+
+The maritime data standards I reviewed reinforced this point. The production problem is not only collecting more data; it is making sure that data from different sources can be understood consistently.
+
+## SVD and voyage-performance reports
+
+I looked at two related ideas while developing the project.
+
+**SVD:** useful as a reference for standardised vessel operational and emissions data points.
+
+**Voyage Performance Report / noon-report concepts:** useful for thinking about voyage segments, operational modes, events and exceptions.
+
+I treat them as complementary ideas:
+
+**data definitions → operational context → analytics**
+
+The project does not implement either system in full.
+
+In particular, this repository does not claim to provide:
+
+- full SVD compliance;
+- IMO Compendium implementation;
+- ISO 19848 data exchange;
+- real noon-report ingestion;
+- a production VPR system.
+
+## What I would build next with real data
+
+I would first make the data reliable enough to support a meaningful comparison.
+
+A sensible sequence would be:
+
+1. agree the field definitions and units;
+2. establish timestamps and vessel/voyage identity;
+3. bring together the available ship, AIS, fuel and environmental data;
+4. check missing values, outliers and obvious bad readings;
+5. create voyage/segment records;
+6. establish vessel-specific expected performance;
+7. validate on future periods and unseen vessels/routes;
+8. add exception handling and operational context;
+9. add emissions/cost calculations;
+10. build decision-support features only after the performance signal is trusted.
+
+The important point is that the production challenge is not simply “use a better ML algorithm”. It is **getting reliable, well-defined operational data into a form where the model can be trusted.**
+
+## Boundary of this POC
+
+The current project demonstrates:
+
+- fuel-consumption prediction;
+- vessel-aware validation;
+- expected-fuel calculation;
+- actual-vs-expected screening;
+- simple speed/ETA scenario analysis;
+- awareness of the production data requirements.
+
+It does not demonstrate:
+
+- live vessel data ingestion;
+- large-scale streaming;
+- cloud production architecture;
+- real-time fleet monitoring;
+- vessel-specific hydrodynamic modelling;
+- commercial fuel-saving recommendations.
+
+Those are the next layers of a real system, not claims about this project.
