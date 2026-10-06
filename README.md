@@ -1,172 +1,241 @@
-# Voyage Fuel Optimizer — Maritime Fuel Consumption & Voyage Decision-Support POC
+# Voyage Fuel Optimizer — Maritime Fuel & Performance POC
 
-A public-data proof of concept demonstrating how a maritime professional can combine machine learning, vessel-domain knowledge and scenario analysis to explore fuel-consumption and voyage-speed decisions.
+A portfolio project built to show how I would approach a vessel fuel-performance problem using public data, Python and machine learning.
 
-> **Important:** This is a data-science portfolio project, not a production vessel-performance system. The dataset is public/synthetic-style tabular voyage data and does not represent live operational data from a specific vessel.
+> **This is a proof of concept, not a production vessel-performance system.** I built it because I wanted to connect my marine-engineering and technical-management experience with the data-science skills I have been developing.
 
-## 🚀 Live App
+## Live app
 
-**Try the interactive Streamlit application:** [Open Voyage Fuel Optimizer](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
+[Open Voyage Fuel Optimizer](https://voyage-fuel-optimizer-abjnte8lhjkkua6ebpaxle.streamlit.app/)
 
-The app lets you enter a voyage scenario, estimate fuel consumption, and explore speed/ETA sensitivity. The result is a portfolio proof of concept and should not be interpreted as a production vessel-performance recommendation.
+The app lets you enter a voyage scenario, estimate fuel consumption and explore the effect of speed and ETA assumptions.
 
-## Problem
+The result is intended for portfolio demonstration. It is **not** a recommendation for operating a commercial vessel.
 
-Ship operators continuously balance fuel consumption, voyage time and schedule requirements. A useful decision-support workflow should be able to:
+## What I was trying to answer
 
-- estimate fuel consumption for a voyage scenario;
-- test how speed and ETA constraints affect a voyage;
-- expose the assumptions behind an optimisation result; and
-- identify what additional operational data would be required before deployment.
+I started with a simple question:
 
-## Dataset
+> **Can I use the information available in a public voyage dataset to estimate fuel consumption reasonably well?**
 
-The project uses `data/ship_fuel_efficiency.csv` with 1,440 records and fields including:
+After building the first model, I had a second question:
 
-- vessel/ship identifier and ship type
+> **Does the model still work when it is asked to predict a vessel it has never seen before?**
+
+I then extended the project one step further:
+
+> **Can the prediction be used as an expected value so that actual fuel consumption can be compared with it?**
+
+That led to the current workflow:
+
+**voyage data → fuel prediction → vessel-aware validation → expected fuel → actual vs expected**
+
+## The dataset
+
+The project uses `data/ship_fuel_efficiency.csv`.
+
+It contains:
+
+- 1,440 voyage records
+- 120 vessels
+- ship type
 - route
 - month
 - distance
 - fuel type
-- fuel consumption
-- CO₂ emissions
 - weather condition
 - engine efficiency
+- fuel consumption
+- CO₂ emissions
 
-The current model does **not** use `ship_id` as a predictive feature.
+The source dataset is much simpler than the information normally available in a real vessel-performance environment. That is an important limitation of the project.
 
-## Modelling approach
+`ship_id` is kept for inspection and validation grouping, but it is not used as a model feature.
 
-The baseline model is a scikit-learn pipeline containing:
+## What I built
+
+### 1. Initial fuel-consumption model
+
+I used a scikit-learn pipeline with:
 
 - one-hot encoding for categorical variables;
-- passthrough numeric variables;
-- Random Forest Regression with 300 trees.
+- numeric features passed through;
+- Random Forest regression.
 
-The current target is `fuel_consumption` **per voyage record**. It should not be interpreted as a directly observed fuel-per-day or fuel-per-nautical-mile measure unless the source dataset defines it that way.
+The original random row-level split produced approximately:
 
-The original model evaluation reports approximately:
+- **R²: 0.93**
+- **MAE: 342 L**
+- **RMSE: 461 L**
 
-- R²: 0.93
-- MAE: 342 L
-- RMSE: 461 L
+These numbers are useful as the first result from the project, but I did not want to stop there.
 
-These figures are useful as a portfolio baseline, but they should not be interpreted as production-grade vessel-performance accuracy. Random train/test splitting can overstate generalisation when observations are related by vessel, route or repeated operating conditions.
+Because the same vessel can appear in multiple rows, a random split can put observations from one vessel into both training and test sets. That can make the model look more general than it really is.
 
-## Validation strategy
+### 2. Vessel-aware validation
 
-The repository now includes a stronger validation path in `scripts/validate_generalisation.py`.
+I therefore added two additional checks.
 
-Instead of randomly splitting individual rows, the validation script holds out entire vessels using `ship_id` as a **grouping variable only**. The model therefore has to predict observations from vessels it did not see during training.
+**Grouped out-of-fold analysis**
 
-The script also reports a simple training-set mean baseline.
+The performance workflow uses 5-fold GroupKFold with `ship_id` as the grouping variable. Each prediction is made by a model that did not train on other observations from that same vessel.
 
-This is an important distinction for a vessel-performance portfolio project:
+Result:
 
-**random row split → “Can the model fit similar observations?”**
+| Metric | Grouped OOF |
+|---|---:|
+| MAE | 610.52 L |
+| RMSE | 1,071.39 L |
+| R² | 0.9520 |
 
-**vessel holdout → “Can the model generalise to an unseen vessel?”**
+**Held-out-vessel test**
 
-The vessel-holdout result should be reported alongside the original random-split result rather than silently replacing it.
+A separate validation script holds out complete vessels:
 
-## Voyage-speed scenario analysis
+- 96 vessels for training
+- 24 completely unseen vessels for testing
 
-The application separates two concepts:
+Result:
 
-1. **ML estimate:** predicted fuel consumption for the supplied voyage scenario.
-2. **Speed sensitivity:** a transparent physics-inspired cubic relationship used only as a scenario assumption.
+| Metric | Held-out vessels |
+|---|---:|
+| MAE | 790.97 L |
+| RMSE | 1,330.34 L |
+| R² | 0.9470 |
 
-For a reference speed (v_ref), the model-predicted voyage fuel is converted to an implied reference fuel rate using the supplied distance and reference speed. The rate is then scaled as:
+For comparison, a simple mean baseline on those 24 test vessels produced:
+
+- MAE: 4,148.16 L
+- RMSE: 5,971.64 L
+- R²: -0.0684
+
+The held-out result is encouraging, but I would not describe it as production accuracy. The dataset is still a relatively small public dataset and does not contain the operational information available in a real vessel environment.
+
+## Turning prediction into a performance signal
+
+The next step was to make the project more useful than a single prediction.
+
+For each record, the grouped out-of-fold model produces an **expected fuel** value.
+
+I can then calculate:
+
+**fuel deviation = actual fuel − expected fuel**
+
+and a percentage deviation.
+
+This gives a simple way of asking:
+
+> **Was this observation above or below what the model expected?**
+
+A positive deviation means actual consumption was higher than the model's expected value.
+
+It is only a **screening signal**. It does not prove that a vessel was technically underperforming. A real investigation would need the operating context.
+
+For example, higher fuel consumption could be associated with speed, distance, draft/trim, weather, sea state, current, machinery condition, operational mode or an unusual event.
+
+## Speed and ETA scenario analysis
+
+The Streamlit app also contains a simple speed-sensitivity calculation.
+
+The model prediction is used to derive a reference fuel rate, and that rate is then adjusted using a cubic speed relationship:
 
 `F_day(v) = F_day(v_ref) × (v / v_ref)^3`
 
-and total voyage fuel is calculated from voyage time.
+I included this because it gives the user a way to explore the relationship between speed, voyage time and fuel.
 
-This makes the units internally consistent, but the result remains an **assumption-driven scenario estimate**. The dataset does not establish a vessel-specific speed-power curve.
+However, this is an **assumption used for the scenario tool**. The public dataset does not provide a vessel-specific speed-power curve, so the result should not be interpreted as a validated hydrodynamic relationship.
 
-## Example
+For example, the earlier Port Harcourt–Lagos scenario produced approximately 10.75 knots and 1,496 L under the stated assumptions and ETA constraint.
 
-For the example Port Harcourt–Lagos scenario with a 12-hour ETA constraint, the earlier notebook produced an optimum around 10.75 knots and approximately 1,496 L total fuel.
+That means:
 
-That result should be read as:
+> Under the assumptions used by this prototype, approximately 10.75 knots was the lowest feasible speed for the selected ETA.
 
-> “Under this dataset and the stated cubic speed-scaling assumption, the lowest feasible speed meeting the ETA constraint is approximately 10.75 knots.”
+It does **not** mean that 10.75 knots is the optimum operating speed of a real vessel.
 
-It should **not** be presented as the real optimum operating speed of a commercial vessel.
+## What this project demonstrates
 
-## Why this matters in real vessel-performance work
+The main thing I wanted to demonstrate was not a high R² score.
 
-A production vessel-performance solution would normally combine sources such as:
+It was the ability to work through a maritime analytics problem:
 
-- noon reports / daily reports;
-- AIS position and speed data;
-- engine and machinery parameters;
-- RPM and load;
-- draft, displacement and trim;
-- wind, waves, currents and weather routing;
-- hull/propeller condition and fouling;
-- bunker delivery and consumption records;
-- vessel-specific speed-power curves;
-- voyage plan, ETA and charter-party constraints.
+1. identify a practical operational question;
+2. inspect and prepare available data;
+3. build a first model;
+4. question whether the first validation was appropriate;
+5. test generalisation at vessel level;
+6. turn predictions into an expected-performance measure;
+7. build a simple interface around the result; and
+8. identify what would be needed to make the approach useful with real vessel data.
 
-A production system would also need vessel-specific baselines, data-quality controls, anomaly detection, model monitoring, explainability, uncertainty estimates and operational workflows for recommendations.
+## What is missing compared with a real vessel
 
-## Voyage Performance Analytics — Version 2
+The public dataset does not give me the information I would normally want for a serious vessel-performance investigation.
 
-The project now extends beyond a simple fuel prediction question toward a vessel-performance workflow:
+For example, a real implementation could need:
 
-**actual fuel → expected fuel → performance deviation → operational context**
+- noon/daily reports;
+- AIS position and speed;
+- speed through water;
+- engine load and RPM;
+- fuel consumption by relevant consumer;
+- fuel ROB and bunker records;
+- draft and trim;
+- wind, waves and currents;
+- vessel-specific speed/power information;
+- hull and propeller condition;
+- voyage plan and ETA;
+- operational mode and exceptions;
+- reliable timestamps and data definitions.
 
-The new performance layer uses grouped out-of-fold validation, with `ship_id` used only to keep observations from the same vessel in the same validation fold. This reduces the risk of presenting a random row split as evidence of generalisation to unseen vessels.
+I have **not** tried to invent these fields in this project.
 
-The application now includes an optional **Actual vs expected fuel performance** section. It reports grouped out-of-fold metrics and shows vessel-level fuel-deviation summaries.
+Instead, I documented them as the next data requirements.
 
-A separate script, `scripts/performance_analysis.py`, produces `outputs/voyage_performance_oof.csv` with:
+## What I learned from looking at real maritime data structures
 
-- actual fuel;
-- expected fuel;
-- absolute error;
-- fuel deviation;
-- percentage fuel deviation.
+While working on the project I looked at the Smart Maritime Network Standardised Vessel Dataset (SVD) and the Intelligent Ship Transport System voyage-performance-report work.
 
-Positive fuel deviation means actual consumption is above the model's expected value for that observation. It is a screening signal, not proof of technical underperformance.
+This was mainly useful for understanding how a real maritime dataset would be structured and why consistent definitions matter.
 
-### Maritime data model
+For example, a production system needs to know whether a distance value is distance through water or over ground, what a fuel value represents, which consumer it belongs to, when the measurement was taken and how the signal is defined.
 
-The repository also includes `data/maritime_data_dictionary.csv`. It separates fields that exist in the public demonstration dataset from fields required for a real vessel-performance implementation.
+The project does **not** implement the SVD, IMO Compendium, ISO 19848 or a production VPR system. They are reference points that helped me understand the gap between this public-data exercise and a real vessel-performance application.
 
-The data dictionary and design notes are informed by the Smart Maritime Network Standardised Vessel Dataset and the ISTS Voyage Performance Report model. The project does **not** claim to implement the complete SVD, IMO Compendium or a production VPR system.
+See:
 
-The supporting design document is `docs/voyage_performance_analytics.md`.
+- [Voyage Performance Analytics](docs/voyage_performance_analytics.md)
+- [Production Data Architecture](docs/svd_production_alignment.md)
+- [Model Card](docs/model_card.md)
 
-### Why the distinction matters
+## Important limitations
 
-A vessel consuming more fuel is not automatically performing poorly. A meaningful performance comparison needs context such as speed, distance, draft, trim, weather, sea state, current, engine load, operational mode and exceptions.
+This project should be read with the following limitations in mind:
 
-The current public dataset does not contain enough information for validated vessel-specific performance modelling. The project therefore makes the production-data gap explicit rather than inventing missing operational data.
-
-## Portfolio value
-
-This project demonstrates an end-to-end workflow:
-
-**maritime problem → data preparation → predictive modelling → grouped validation → actual-vs-expected performance → scenario analysis → production-gap assessment**
-
-The most important capability demonstrated is not the model score alone. It is the ability to connect a machine-learning result to a maritime operational question while clearly identifying assumptions and limitations.
+- The dataset is public and much simpler than real shipboard data.
+- The model does not use live AIS or machinery data.
+- The model does not contain a vessel-specific speed-power curve.
+- The weather information is a broad category rather than measured environmental data.
+- The project does not establish a production-grade fuel-performance baseline.
+- The speed-sensitivity calculation is an explicit assumption.
+- The model does not account for all of the physical and operational factors that affect fuel consumption.
+- There is no genuine time-series backtesting because the dataset does not provide a suitable date/time field.
+- The results should not be interpreted as commercial operating recommendations.
 
 ## Repository structure
 
-- `data/` — public project dataset
-- `notebooks/01_eda_and_model_selection.ipynb` — EDA and model comparison
+- `data/` — project dataset and maritime data dictionary
+- `notebooks/01_eda_and_model_selection.ipynb` — initial EDA and model work
 - `notebooks/02_voyage_optimizer.ipynb` — speed/ETA scenario analysis
 - `models/` — trained model artifact
 - `app/streamlit_app.py` — interactive scenario application
 - `retrain_model.py` — model training script
 - `scripts/validate_generalisation.py` — vessel-holdout validation
-- `scripts/performance_analysis.py` — grouped out-of-fold actual-vs-expected analysis
-- `data/maritime_data_dictionary.csv` — demonstration vs production maritime data mapping
-- `docs/voyage_performance_analytics.md` — Version 2 design and production-data rationale
-- `app/performance.py` — grouped out-of-fold performance calculations
-- `docs/model_card.md` — modelling assumptions, limitations and production gaps
+- `scripts/performance_analysis.py` — grouped out-of-fold performance analysis
+- `data/maritime_data_dictionary.csv` — current data and production data requirements
+- `docs/voyage_performance_analytics.md` — explanation of the performance-analysis extension
+- `docs/model_card.md` — model assumptions and limitations
+- `docs/svd_production_alignment.md` — notes on the production-data gap
 
 ## Running locally
 
@@ -177,38 +246,33 @@ pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-To run the stronger validation:
+To run the vessel-holdout validation:
 
 ```bash
 python scripts/validate_generalisation.py
 ```
 
-## Future development
+## Where I would take it next
 
-The next stages are deliberately focused on maritime evidence and decision support rather than adding model complexity:
+If I had access to suitable real vessel data, I would not start by making the machine-learning model more complicated.
 
-1. complete and document vessel-holdout and grouped out-of-fold evidence;
-2. add uncertainty and error analysis;
-3. introduce route-holdout validation;
-4. normalise fuel metrics only where source definitions support it;
-5. incorporate AIS, weather and ocean data;
-6. introduce vessel-specific speed-power relationships;
-7. add emissions and cost analysis;
-8. add voyage segments, operational modes and exception handling using real or appropriately labelled data;
-9. build data-quality and anomaly monitoring; and
-10. evolve toward fleet-level benchmarking and recommendation workflows.
+I would first improve the data and the performance definition:
+
+1. add reliable timestamps and voyage/segment information;
+2. bring in AIS and measured weather/ocean data;
+3. add draft/trim and engine load/RPM;
+4. define fuel measurements and consumers clearly;
+5. develop vessel-specific baselines;
+6. test time, vessel and route generalisation;
+7. investigate data quality and abnormal observations;
+8. add emissions and cost calculations;
+9. introduce uncertainty around predictions; and
+10. only then consider more advanced optimisation or fleet-scale deployment.
+
+That is the main boundary of this project: **the prototype demonstrates the analytical approach; a real system would depend heavily on the quality, history and context of the underlying vessel data.**
 
 ## About
 
 Independent maritime data-science project by Midhun Raj, combining marine engineering and technical-superintendent experience with data analytics, machine learning and maritime digitalisation.
 
 GitHub: https://github.com/midhunrajds
-
-
-## SVD-aligned production architecture
-
-The project now includes `docs/svd_production_alignment.md`, which makes the production-data path explicit using the Smart Maritime Network Standardised Vessel Dataset (SVD) as a **data vocabulary/interoperability reference**, not as an optimisation algorithm. It connects the public POC to a practical architecture: onboard data → acquisition/historian → codebook/standardisation → SVD-aligned data → AIS/weather/ocean/voyage context → voyage/segment model → expected performance → actual-vs-expected analysis → decision support.
-
-This distinction is important: SVD describes what operational data points mean and how they can be standardised; voyage-performance concepts provide context around voyages, segments, modes and exceptions; analytics then uses those standardised inputs. The project explicitly avoids claiming full SVD, IMO Compendium, ISO 19848 or production VPR implementation.
-
-The production gap remains deliberate. The public dataset lacks important dimensions such as speed through water, draft/trim, engine load/RPM, detailed weather/ocean conditions, fuel-consumer data, timestamps, voyage segments and exception context. Those are documented as requirements rather than invented.
