@@ -10,7 +10,7 @@ It is **not** a production fuel-consumption model.
 
 ## Target
 
-`fuel_consumption` as defined by the source dataset.
+fuel_consumption as defined by the source dataset.
 
 For this project it is treated as the fuel-consumption value attached to each voyage record. I have not converted it into fuel/day or fuel/nm because that would require a source definition that is not available in the project documentation.
 
@@ -18,18 +18,18 @@ For this project it is treated as the fuel-consumption value attached to each vo
 
 Categorical:
 
-- `ship_type`
-- `route_id`
-- `fuel_type`
-- `weather_conditions`
-- `month`
+- ship_type
+- route_id
+- fuel_type
+- weather_conditions
+- month
 
 Numeric:
 
-- `distance`
-- `engine_efficiency`
+- distance
+- engine_efficiency
 
-`ship_id` is retained for inspection and validation grouping. It is not used as a predictive feature.
+ship_id is retained for inspection and validation grouping. It is not used as a predictive feature.
 
 ## Model
 
@@ -59,7 +59,7 @@ If rows from the same vessel appear in both training and test sets, the model ca
 
 I therefore added:
 
-- 5-fold GroupKFold analysis using `ship_id`;
+- 5-fold GroupKFold analysis using ship_id;
 - a separate held-out-vessel test.
 
 ## Current validation results
@@ -92,11 +92,11 @@ The grouped out-of-fold predictions are treated as an estimate of expected fuel 
 
 I calculate:
 
-`fuel_deviation = actual fuel - expected fuel`
+fuel_deviation = actual fuel - expected fuel
 
 and:
 
-`fuel_deviation_pct = fuel_deviation / expected fuel × 100`
+fuel_deviation_pct = fuel_deviation / expected fuel × 100
 
 The purpose is to create a simple screening signal.
 
@@ -110,11 +110,32 @@ The application contains a separate scenario calculation for speed and ETA.
 
 It derives a reference fuel rate from the model prediction and applies a cubic relationship to speed:
 
-`F_day(v) = F_day(v_ref) × (v / v_ref)^3`
+F_day(v) = F_day(v_ref) × (v / v_ref)^3
 
 This is a transparent assumption used to explore a scenario.
 
 It is not a vessel-specific resistance curve, hydrodynamic model or validated speed-power relationship.
+
+## Real-world references considered
+
+The model itself is not certified or validated against a maritime standard.
+
+However, when I considered what a real implementation would need, I reviewed several maritime standards and industry references that help define the data and performance context:
+
+- Smart Maritime Network Standardised Vessel Dataset (SVD) Version 2.0 — common vessel operational and emissions data definitions.
+- IMO Compendium — wider maritime data harmonisation; the version approved by FAL 50 in 2026 adds meteorological and oceanographic observations.
+- ISO 19848:2024 — standard data for shipboard machinery, equipment and operational information.
+- ISO 19847:2024 — shipboard data servers for collecting and sharing field data.
+- ISO 19030 Parts 1–3 — measurement of changes in hull and propeller performance.
+- IACS Recommendation 183 — ship data quality.
+- DNV-RP-0497 — data quality assurance.
+- IMO DCS / MARPOL Annex VI — fuel-consumption reporting context.
+- DCSA Port Call Standard 2.0 — port-call and just-in-time operational data exchange.
+- ISO 18131:2025 — ship-shore publish-subscribe operational data communication.
+
+These references informed the production-data gap analysis. They are **not claims of implementation or compliance**.
+
+See [Maritime Standards & Industry References Considered](maritime_standards_and_industry_references.md).
 
 ## Main limitations
 
@@ -147,6 +168,8 @@ I would want to establish:
 - weather and ocean conditions;
 - vessel-specific performance information;
 - data-quality rules and source definitions.
+
+For an appropriate vessel/use case, I would also consider established performance measurement methods such as the ISO 19030 series when evaluating changes in hull and propeller performance over time.
 
 Validation would then need to consider the actual use case. Depending on the question, that could include vessel holdout, time-based testing and route or operating-condition holdout.
 
